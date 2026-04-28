@@ -1,24 +1,27 @@
 FROM python:3.14-slim
 
+# Install Chromium and ChromeDriver
+RUN apt-get update && apt-get install -y \
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Same packages jo GitHub Actions me install ho rahe hain
-RUN apt-get update && apt-get install -y \
-    chromium-browser \
-    chromium-chromedriver \
-    && rm -rf /var/lib/apt/lists/* \
-    && if [ -f /usr/bin/chromium-browser ] && [ ! -f /usr/bin/chromium ]; then \
-        ln -s /usr/bin/chromium-browser /usr/bin/chromium; \
-    fi
-
-# Python dependencies
+# Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Bot files copy karo
-COPY bot.py database.py README.md .
+# Copy all files
+COPY . .
 
-EXPOSE 4000
+# Environment variables
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+ENV PYTHONUNBUFFERED=1
 
-# Same while loop jo GitHub Actions me hai
-CMD while true; do python bot.py; echo "Bot stopped, restarting..."; sleep 5; done
+# Expose port (Render will use PORT env variable)
+EXPOSE 5000
+
+# Run the bot (original bot.py, not Flask)
+CMD ["python", "bot.py"]
