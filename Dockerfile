@@ -2,16 +2,23 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-# Sirf Chromium browser install karo (driver nahi chahiye)
-RUN apt-get update && apt-get install -y chromium && rm -rf /var/lib/apt/lists/*
+# Same packages jo GitHub Actions me install ho rahe hain
+RUN apt-get update && apt-get install -y \
+    chromium-browser \
+    chromium-chromedriver \
+    && rm -rf /var/lib/apt/lists/* \
+    && if [ -f /usr/bin/chromium-browser ] && [ ! -f /usr/bin/chromium ]; then \
+        ln -s /usr/bin/chromium-browser /usr/bin/chromium; \
+    fi
 
-# Python packages
+# Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Bot files
+# Bot files copy karo
 COPY bot.py database.py README.md .
 
-EXPOSE 5000
+EXPOSE 4000
 
-CMD ["python", "bot.py"]
+# Same while loop jo GitHub Actions me hai
+CMD while true; do python bot.py; echo "Bot stopped, restarting..."; sleep 5; done
